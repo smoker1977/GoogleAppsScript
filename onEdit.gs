@@ -17,6 +17,10 @@ var commentSeparator = "\n-------------\n";
 
 /**
  * ステータスが編集された時に背景色を変更し、コメントを追加する
+ * イベントトリガー
+ * 実行：onEdit
+ * イベント：「スプレッドシートから」「値の変更」
+ *
  * @param event events {@see https://developers.google.com/apps-script/understanding_events?hl=ja}
  */
 function onEdit(event) {
