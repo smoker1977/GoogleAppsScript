@@ -1,38 +1,74 @@
 //----------------------------------------------
 // Enum
 //----------------------------------------------
+
+var DateFormat = {
+  TZ : "JST",
+  STYLE : "yyyy/M/d HH:mm:ss"
+}
+
 var Color = {
   CHANGE:'#E8FFBD'
 };
 
 // 編集された際に色変え処理を動かすスイッチ
-var STATUS = {
-  SHEET : "シート15",
-  CELL : "A32"
+var chkSWITCH = {
+  NAME : "SWITCH_SETTING",
+  ON : "ON",
+  OFF : "OFF"
 }
 
 // comment間のSeparator
 var commentSeparator = "\n-------------\n";
 
+// 初回起動 or 設定キャッシュが見つからない場合のコメント
+var msgSTART = "設定が見つかりませんでしたので変更チェックをOFFにしています。"
++ "\\n"
++ "変更チェックを有効にする場合は、"
++ "\\n"
++ "メニュー → 変更チェック → チェックON を選択してください。";
+
+var strMenu = {
+  MENU : '変更チェック',
+  ON : "チェックON",
+  ON_FUNC : "chkOn",
+  OFF : "チェックOFF",
+  OFF_FUNC : "chkOff",
+  CHK : "✔ "
+}
+
+/**
+ * 起動時の処理
+ * 
+ */
+function onOpen(e){
+  // ユーザキャッシュから設定の読み込み
+  // 初回 or キャッシュが見つからない場合はOFFにする
+  var cache = CacheService.getUserCache();
+  if (!cache.get(chkSWITCH.NAME)) {
+    Browser.msgBox(msgSTART);
+    cache.put(chkSWITCH.NAME, chkSWITCH.OFF);
+    makeMenu(cache.get(chkSWITCH.NAME));
+  }else{
+    makeMenu(cache.get(chkSWITCH.NAME));
+  }
+}
 
 /**
  * ステータスが編集された時に背景色を変更し、コメントを追加する
- * イベントトリガー
- * 実行：onEdit
- * イベント：「スプレッドシートから」「値の変更」
- *
- * @param event events {@see https://developers.google.com/apps-script/understanding_events?hl=ja}
+ * 
  */
 function onEdit(event) {
   var sheet = event.source.getActiveSheet();
   var activeCell = sheet.getActiveCell();
   var oldVal = event.oldValue;
   var strComment = "";
+  var cache = CacheService.getUserCache();
   
   //----------------------------------------------
   // スイッチがONの場合のみ稼働する
   //----------------------------------------------
-  if (event.source.getSheetByName(STATUS.SHEET).getRange(STATUS.CELL).getValue() == "on") {
+  if (cache.get(chkSWITCH.NAME) == chkSWITCH.ON) {
     
     //----------------------------------------------
     // コメント作成
@@ -42,14 +78,12 @@ function onEdit(event) {
     }else{
       oldVal = event.oldValue;
     }
-    
-    strComment =  Session.getActiveUser().getUserLoginId()
-    + "\n"
-    + "書込時間：" + Utilities.formatDate( new Date(), 'JST', "yyyy/M/d HH:mm:ss")
-    + "\n"
-    + "変更前：" + oldVal
-    + commentSeparator
-    + activeCell.getComment();
+        
+    strComment = makeComment(
+      Session.getActiveUser().getUserLoginId()
+      , Utilities.formatDate( new Date(), DateFormat.TZ, DateFormat.STYLE)
+      , oldVal
+      , activeCell.getComment());
 
     //----------------------------------------------
     // 背景色変更
@@ -66,4 +100,70 @@ function onEdit(event) {
   }
   
   return;
+}
+
+/**
+ * メニュー → 変更チェック → チェックOFF を選択した場合の処理
+ * ユーザのキャッシュに書き込み
+ */
+function chkOn(){
+  var cache = CacheService.getUserCache();
+  cache.put(chkSWITCH.NAME, chkSWITCH.ON);
+  makeMenu(chkSWITCH.ON);
+}
+
+/**
+ * メニュー → 変更チェック → チェックOFF を選択した場合の処理
+ * ユーザのキャッシュに書き込み
+ */
+function chkOff(){
+  var cache = CacheService.getUserCache();
+  cache.put(chkSWITCH.NAME, chkSWITCH.OFF);
+  makeMenu(chkSWITCH.OFF);
+}
+
+/**
+ * メニュー項目の作成
+ * 設定してある方にチェックを入れる
+ */
+function makeMenu (e) {
+  var strOnMsg = "";
+  var strOffMsg = "";
+  
+  switch (e) {
+    case (chkSWITCH.ON) :
+      strOnMsg = strMenu.CHK + strMenu.ON;
+      strOffMsg = strMenu.OFF;
+      break;
+    case (chkSWITCH.OFF) :
+      strOnMsg = strMenu.ON;
+      strOffMsg = strMenu.CHK + strMenu.OFF;
+      break;
+    default:
+      strOnMsg = strMenu.ON;
+      strOffMsg = strMenu.OFF;
+      break;
+  }
+  
+  SpreadsheetApp.getUi()
+  .createMenu(strMenu.MENU)
+  .addItem(strOnMsg, strMenu.ON_FUNC)
+  .addItem(strOffMsg, strMenu.OFF_FUNC)
+  .addToUi();
+
+}
+
+/**
+ * メニュー項目の作成
+ * 設定してある方にチェックを入れる
+ */
+function makeComment (id, strTime, oldVal, preComment) {
+  var str =  id
+    + "\n"
+    + "書込時間：" + strTime
+    + "\n"
+    + "変更前：" + oldVal
+    + commentSeparator
+    + preComment;
+  return str;
 }
