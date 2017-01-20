@@ -26,7 +26,7 @@ var msgSTART = "設定が見つかりませんでしたので変更チェック�
 + "\\n"
 + "変更チェックを有効にする場合は、"
 + "\\n"
-+ "メニュー → 変更チェック → チェックON を選択してください。";
++ "アドオンメニュー → 更新したセルのチェック → チェックON を選択してください。";
 
 var strMenu = {
   MENU : '変更チェック',
@@ -37,6 +37,15 @@ var strMenu = {
   CHK : "✔ "
 }
 
+
+/**
+ * インストール時の処理
+ * 
+ */
+function onInstall() {
+  onOpen();
+}
+
 /**
  * 起動時の処理
  * 
@@ -45,12 +54,14 @@ function onOpen(e){
   // ユーザキャッシュから設定の読み込み
   // 初回 or キャッシュが見つからない場合はOFFにする
   var cache = CacheService.getUserCache();
+  var ui = SpreadsheetApp.getUi();
+  
   if (!cache.get(chkSWITCH.NAME)) {
     Browser.msgBox(msgSTART);
     cache.put(chkSWITCH.NAME, chkSWITCH.OFF);
-    makeMenu(cache.get(chkSWITCH.NAME));
+    makeMenu(cache.get(chkSWITCH.NAME), ui);
   }else{
-    makeMenu(cache.get(chkSWITCH.NAME));
+    makeMenu(cache.get(chkSWITCH.NAME), ui);
   }
 }
 
@@ -88,7 +99,6 @@ function onEdit(event) {
     //----------------------------------------------
     // 背景色変更
     //----------------------------------------------
-    //Browser.msgBox(strComment);
     activeCell.setBackground(Color.CHANGE);
 
     //----------------------------------------------
@@ -108,8 +118,10 @@ function onEdit(event) {
  */
 function chkOn(){
   var cache = CacheService.getUserCache();
+  var ui = SpreadsheetApp.getUi();
+
   cache.put(chkSWITCH.NAME, chkSWITCH.ON);
-  makeMenu(chkSWITCH.ON);
+  makeMenu(chkSWITCH.ON, ui);
 }
 
 /**
@@ -118,15 +130,17 @@ function chkOn(){
  */
 function chkOff(){
   var cache = CacheService.getUserCache();
+  var ui = SpreadsheetApp.getUi();
+
   cache.put(chkSWITCH.NAME, chkSWITCH.OFF);
-  makeMenu(chkSWITCH.OFF);
+  makeMenu(chkSWITCH.OFF, ui);
 }
 
 /**
  * メニュー項目の作成
  * 設定してある方にチェックを入れる
  */
-function makeMenu (e) {
+function makeMenu (e, ui) {
   var strOnMsg = "";
   var strOffMsg = "";
   
@@ -145,8 +159,9 @@ function makeMenu (e) {
       break;
   }
   
-  SpreadsheetApp.getUi()
-  .createMenu(strMenu.MENU)
+  ui
+//  .createMenu(strMenu.MENU)
+  .createAddonMenu()
   .addItem(strOnMsg, strMenu.ON_FUNC)
   .addItem(strOffMsg, strMenu.OFF_FUNC)
   .addToUi();
